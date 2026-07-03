@@ -127,9 +127,324 @@
 105. Submission---EXACT--IJCNN---v2/MANIFEST.json
 106. Submission---EXACT--IJCNN---v2/SUMMARY.json
 
-## Suggested interpretation order
-1. XAI-IJCNN
-2. EXACT-IJCNN-2026
-3. XAI-IJCNN-finish
-4. Submission---EXACT--IJCNN
-5. Submission---EXACT--IJCNN---v2
+# EXACT 2026 — System Pipeline Add-on
+
+This file contains a concise README section that can be inserted near the top of `complete---exact/README.md`.
+
+---
+
+## Project Summary
+
+This repository is the cleaned entry point for Team **Astatine**'s EXACT 2026 / IJCNN explainable educational QA system.
+
+The project consolidates five development-stage repositories into one curated archive. The current README already lists the original sources, core files, and recommended interpretation order:
+
+```text
+XAI-IJCNN
+   ↓
+EXACT-IJCNN-2026
+   ↓
+XAI-IJCNN-finish
+   ↓
+Submission---EXACT--IJCNN
+   ↓
+Submission---EXACT--IJCNN---v2
+   ↓
+complete---exact
+```
+
+Round 2 snapshot:
+
+```text
+Team: Astatine
+Rank: #28 / 180 registered teams
+Total: 34.27 pts
+Penalty: 0 pts
+Progress: 50/50
+Type 1: 8.62 pts
+Type 2: 24 pts
+Time: 1.65 pts
+```
+
+---
+
+## System Pipeline
+
+```text
+Input dataset
+   │
+   ├── Natural-language premises
+   ├── FOL / symbolic annotations when available
+   ├── Multiple-choice questions
+   └── Yes / No / Unknown questions
+        │
+        ▼
+[1] Dataset Preflight Audit
+        │
+        ├── flatten grouped samples
+        ├── detect MC ambiguity
+        ├── inspect label distribution
+        ├── check prompt-row identity
+        └── flag risky benchmark versions
+        │
+        ▼
+[2] Prompt & Formalization Layer
+        │
+        ├── construct task-specific prompts
+        ├── normalize premise/question format
+        ├── formalize premises into logic-like structures
+        ├── optionally formalize questions/options
+        └── enforce strict answer schema
+        │
+        ▼
+[3] LLM Reasoning Layer
+        │
+        ├── Qwen / Qwen3 open-source model inference
+        ├── Qwen3-8B QLoRA logic fine-tuning
+        ├── response-only supervised fine-tuning
+        ├── chain-of-thought style training targets
+        └── Best-of-N candidate generation
+        │
+        ▼
+[4] Neuro-Symbolic Verification Layer
+        │
+        ├── parse generated formal structures
+        ├── run Z3-style satisfiability / entailment checks
+        ├── verify Yes / No / Unknown statements
+        ├── evaluate MC options when formalized
+        └── fall back safely when symbolic confidence is low
+        │
+        ▼
+[5] Candidate Selection & Calibration
+        │
+        ├── compare LLM candidates
+        ├── prefer verified symbolic outputs
+        ├── apply strict parser policy
+        ├── repair known formatting failures
+        └── abstain or preserve safer output when uncertain
+        │
+        ▼
+[6] Local Evaluation & Smoke Gate
+        │
+        ├── evaluate generated predictions
+        ├── compute accuracy and F1 metrics
+        ├── compare old vs new pipeline versions
+        ├── enforce allowed-drop thresholds
+        └── generate risk reports
+        │
+        ▼
+[7] Submission Hardening
+        │
+        ├── run dataset preflight audit
+        ├── run prompt identity audit
+        ├── export final predictions
+        ├── generate summary / manifest files
+        └── package final deliverables
+```
+
+---
+
+## Technical Interpretation
+
+The system is best understood as a **neuro-symbolic QA pipeline**:
+
+```text
+LLM = flexible language understanding and formalization
+Z3 / symbolic checks = deterministic logical verification
+Best-of-N = candidate diversity
+Parser policy = valid answer enforcement
+Smoke gate = regression protection
+Risk audit = submission safety
+```
+
+Instead of relying only on the LLM's final answer, the project explores a safer pipeline:
+
+1. use an open-source LLM to understand and formalize educational logic,
+2. use symbolic checks when the generated structure is reliable,
+3. use Best-of-N generation to improve candidate quality,
+4. apply strict answer parsing to avoid invalid labels,
+5. and block risky changes through smoke tests and risk reports.
+
+---
+
+## Key Evidence in the Repository
+
+### Qwen3 QLoRA fine-tuning
+
+Relevant files:
+
+```text
+build_v6_finetune.py
+notebook_v6_finetune.ipynb
+notebook_v14_cot_lora_finetune.ipynb
+```
+
+The fine-tuning stage trains a Qwen3-8B model with Unsloth QLoRA for educational logic reasoning.
+
+Core ideas:
+
+- Qwen3-8B base model
+- 4-bit QLoRA
+- LoRA rank 16
+- response-only supervised fine-tuning
+- chain-of-thought style training targets
+- oversampling of `Unknown`
+- train / validation / reserved test split
+
+### vLLM inference
+
+Relevant files:
+
+```text
+build_v6_inference.py
+notebook_v6_inference.ipynb
+notebook_v7_inference.ipynb
+```
+
+The inference stage upgrades the previous Best-of-N pipeline into a Qwen3-8B + LoRA system using vLLM batch generation.
+
+### Z3 / symbolic reasoning
+
+Relevant files:
+
+```text
+z3_entailment_poc.py
+exact_70_plus_z3.ipynb
+exact_70_z3_hybrid.ipynb
+notebook_v7_z3_standalone.ipynb
+02_symbolic_analysis_mc_and_statement.ipynb
+```
+
+The symbolic direction is based on entailment:
+
+```text
+YES      if premises entail Q
+NO       if premises entail not-Q
+UNKNOWN  if neither Q nor not-Q is entailed
+```
+
+For multiple-choice questions, each option can be formalized and checked for entailment.
+
+### Smoke gate
+
+Relevant files:
+
+```text
+06b_combined_summary.json
+06b_quick_evaluated_output_report.json
+06b_quick_local_simulation_report.json
+06b_risk_report.json
+06b_smoke_gate.json
+```
+
+Recorded smoke-gate result:
+
+```text
+Dataset: generated_v4style_300
+Smoke size: 50
+Old correct: 41 / 50
+New correct: 44 / 50
+Accuracy: 0.88
+Micro F1: 0.88
+Macro-7 F1: 0.7809
+Prompt identity match: 100%
+Gate: pass
+```
+
+### Final safe-audit stage
+
+Relevant files:
+
+```text
+MANIFEST.json
+SUMMARY.json
+stage_00_current_pipeline.json
+stage_00_input_audit.json
+stage_01_replay_report_selected.json
+stage_02_full_metrics.json
+stage_03_gap_audit.json
+stage_04_overfit_underfit_audit.json
+stage_05_upgrade_stage_reports.json
+stage_06_safe_upgrade_decision.json
+```
+
+Version:
+
+```text
+v40.5-one-run-safe-audit
+```
+
+The safe-audit layer is conservative: it prefers abstaining or preserving safer outputs when confidence is low.
+
+---
+
+## Strengths
+
+- Strongest GitHub project in the portfolio from an AI Engineering perspective.
+- Shows an end-to-end reasoning system rather than a single notebook.
+- Uses open-source LLMs rather than closed commercial APIs.
+- Includes QLoRA fine-tuning, vLLM inference, symbolic verification, parser policy, smoke testing, and risk auditing.
+- Preserves development history while giving readers a curated interpretation order.
+- Good evidence of real competition iteration under time pressure.
+
+---
+
+## Current Weaknesses
+
+- README is still mostly an index; it needs a short story at the top.
+- The repo is still notebook-heavy.
+- Some scripts generate notebooks instead of being direct reusable modules.
+- Several paths are Kaggle- or Windows-specific.
+- There is no one-command reproduction path yet.
+- The symbolic/Z3 layer is strong conceptually but conservative in coverage.
+
+---
+
+## Suggested Next Refactor
+
+For a production-style portfolio repo:
+
+```text
+complete---exact/
+├── README.md
+├── docs/
+│   ├── timeline.md
+│   ├── system_pipeline.md
+│   └── audit_reports.md
+├── src/
+│   ├── data/
+│   ├── prompts/
+│   ├── inference/
+│   ├── symbolic/
+│   ├── evaluation/
+│   └── submission/
+├── notebooks/
+│   ├── prototypes/
+│   ├── finetune/
+│   └── inference/
+├── artifacts/
+│   ├── summaries/
+│   ├── risk_reports/
+│   └── smoke_tests/
+├── requirements.txt
+└── run_pipeline.py
+```
+
+Minimum useful additions:
+
+1. Add `requirements.txt`.
+2. Add `run_pipeline.py`.
+3. Move historical notebooks into `notebooks/`.
+4. Move reports into `artifacts/`.
+5. Add a one-command smoke test.
+6. Add a pipeline diagram image.
+7. Add `docs/timeline.md` explaining how the five source repos evolved.
+
+---
+
+## CV-Ready Summary
+
+```text
+Built a neuro-symbolic educational QA system for EXACT 2026 / IJCNN, combining Qwen3-8B QLoRA fine-tuning, vLLM inference, Best-of-N generation, Z3-style symbolic verification, strict answer parsing, smoke testing, risk auditing, and final submission hardening. Reached Round 2 snapshot rank #28 / 180 registered teams as Team Astatine with 34.27 points and 0 penalty.
+```
+
