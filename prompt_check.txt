@@ -1,0 +1,231 @@
+
+# ==================================================================
+# STAGE 2 -- Ontology & Prompts (Two-Pass)
+# ==================================================================
+
+GLOBAL_ONTOLOGY_TEXT = """
+## GLOBAL ONTOLOGY -- BAT BUOC TUAN THU
+
+### Quantifiers:
+  forall -> forall  |  exists -> exists
+
+### Logical Operators:
+  and, or, implies, iff, not
+
+### AST Node Types (4 loai):
+  quantifier : { "type":"quantifier",  "operator":"forall|exists",
+                 "bound_variables":["x",...], "body":{...} }
+  connective : { "type":"connective",  "operator":"and|or|implies|iff|not",
+                 "operands":[{...},...] }
+  predicate  : { "type":"predicate",   "name":"PredicateName",
+                 "arguments":["x","y",...] }
+  variable   : { "type":"variable",    "name":"x" }
+  constant   : { "type":"constant",    "name":"SomeName" }
+
+### QUY TAC:
+  1. Chi dung 4 node types tren
+  2. 'not' chi co DUNG 1 operand
+  3. 'implies' co DUNG 2 operands
+  4. bound_variables phai la list
+  5. Variables: lowercase (x,y,z), Constants: PascalCase
+"""
+
+# ------------------------------------------------------------------
+# FEW-SHOT EXAMPLES (CRITICAL FOR QWEN-7B)
+# ------------------------------------------------------------------
+
+FEW_SHOT_PREMISES = """
+### VÍ DỤ HOÀN CHỈNH:
+
+Premises:
+  "All students who study hard pass the exam."
+  "Alice is a student."
+  "Alice studies hard."
+
+Output:
+{
+  "step1_local_ontology": [
+    {"predicate": "Student",   "arity": 1, "description": "x is a student"},
+    {"predicate": "StudyHard", "arity": 1, "description": "x studies hard"},
+    {"predicate": "PassExam",  "arity": 1, "description": "x passes the exam"}
+  ],
+  "step2_premises_ast": [
+    {
+      "premise_id": 0,
+      "source_nl": "All students who study hard pass the exam.",
+      "ast": {
+        "type": "quantifier", "operator": "forall",
+        "bound_variables": ["x"],
+        "body": {
+          "type": "connective", "operator": "implies",
+          "operands": [
+            {"type": "connective", "operator": "and", "operands": [
+              {"type": "predicate", "name": "Student",   "arguments": ["x"]},
+              {"type": "predicate", "name": "StudyHard", "arguments": ["x"]}
+            ]},
+            {"type": "predicate", "name": "PassExam", "arguments": ["x"]}
+          ]
+        }
+      }
+    },
+    { "premise_id": 1, "source_nl": "Alice is a student.",
+      "ast": {"type": "predicate", "name": "Student", "arguments": ["Alice"]} },
+    { "premise_id": 2, "source_nl": "Alice studies hard.",
+      "ast": {"type": "predicate", "name": "StudyHard", "arguments": ["Alice"]} }
+  ]
+}
+"""
+
+FEW_SHOT_QUESTIONS = """
+### VÍ DỤ HOÀN CHỈNH:
+Question 1: "Is it true that Alice passes the exam?" (Yes/No)
+Question 2: "Which is correct? A. Alice fails. B. Alice passes." (Multiple Choice)
+
+Output:
+{
+  "step3_question_fol": [
+    {
+      "question_id": 0,
+      "question_type": "yes_no",
+      "statement_ast": {"type": "predicate", "name": "PassExam", "arguments": ["Alice"]}
+    },
+    {
+      "question_id": 1,
+      "question_type": "multiple_choice",
+      "options_ast": {
+         "A": {"type": "connective", "operator": "not", "operands": [{"type": "predicate", "name": "PassExam", "arguments": ["Alice"]}]},
+         "B": {"type": "predicate", "name": "PassExam", "arguments": ["Alice"]}
+      }
+    }
+  ]
+}
+"""
+
+# ------------------------------------------------------------------
+# PASS 1 PROMPTS (PREMISES ONLY)
+# ------------------------------------------------------------------
+
+PREMISE_FORMALIZATION_SYSTEM = (
+    "Ban la chuyen gia logic hinh thuc (FOL). Nhiem vu:\n"
+    "  Buoc 1: Tao LOCAL ONTOLOGY -- danh sach Predicates\n"
+    "  Buoc 2: Chuyen TUNG tien de thanh cay AST JSON de quy\n\n"
+    + GLOBAL_ONTOLOGY_TEXT + "\n"
+    + FEW_SHOT_PREMISES + "\n"
+    "Output JSON THUAN TUY (khong markdown, khong text thua):\n"
+)
+
+CORRECTION_SYSTEM = (
+    "Ban la chuyen gia sua loi FOL. He thong Z3 da phat hien loi.\n"
+    "Nhiem vu: sua lai Buoc 1 + Buoc 2 de khong con loi.\n\n"
+    + GLOBAL_ONTOLOGY_TEXT + "\n"
+    "Output JSON thuan tuy -- format GIONG HET lan dau.\n"
+)
+
+# ------------------------------------------------------------------
+# PASS 2 PROMPTS (QUESTIONS ONLY)
+# ------------------------------------------------------------------
+
+QUESTION_FORMALIZATION_SYSTEM = (
+    "Ban la chuyen gia logic hinh thuc (FOL). Nhiem vu:\n"
+    "  Chuyen TUNG cau hoi thanh AST JSON de kiem tra Z3 Entailment.\n\n"
+    + GLOBAL_ONTOLOGY_TEXT + "\n"
+    + FEW_SHOT_QUESTIONS + "\n"
+    "QUAN TRONG:\n"
+    "  - Ban PHAI su dung cac Predicate tu LOCAL ONTOLOGY duoc cung cap.\n"
+    "  - question_type: 'yes_no' hoac 'multiple_choice'\n"
+    "  - yes_no: chuyen statement thanh 1 AST node (statement_ast)\n"
+    "  - multiple_choice: chuyen TUNG option A/B/C/D thanh AST (options_ast)\n\n"
+    "Output JSON THUAN TUY:\n"
+)
+
+# Fallback
+ANSWER_SYSTEM = (
+    "Ban la chuyen gia suy luan logic. Dua vao cac tien de FOL da duoc Z3 xac minh, hay tra loi cau hoi.\n"
+    "QUAN TRONG: Ban PHAI dua ra suy luan (reasoning) tung buoc TRUOC KHI dua ra dap an (answer).\n"
+    'Tra loi JSON THUAN TUY: {"reasoning": "...", "answer": "A|B|C|D|Yes|No|Unknown"}\n'
+)
+
+# Physics
+PHYSICS_SOLVER_SYSTEM = (
+    "You are an expert physics problem solver. Solve step-by-step.\n"
+    'Output PURE JSON: {"steps": ["..."], "answer": "<number>", "unit": "<unit>"}\n'
+)
+PHYSICS_MC_SYSTEM = (
+    "You are an expert physics problem solver. Solve the multiple-choice problem.\n"
+    "IMPORTANT: Write your step-by-step reasoning BEFORE giving the final answer.\n"
+    'Output PURE JSON: {"reasoning": "...", "answer": "<answer>"}\n'
+)
+
+# ==================================================================
+# UTILS
+# ==================================================================
+import os, csv, re, time
+from collections import Counter
+from dataclasses import dataclass, field
+from pathlib import Path
+
+def load_dataset(path, is_physics=False, max_samples=N_SAMPLES, split_mode=RUN_ON_SPLIT):
+    if not path or not os.path.exists(path): return []
+    if path.endswith(".csv"):
+        with open(path, encoding="utf-8") as f: raw = list(csv.DictReader(f))
+    else:
+        with open(path, encoding="utf-8") as f: raw = json.load(f)
+    
+    out = raw[:max_samples]
+    
+    # --- SPLIT LOGIC ---
+    import random
+    rng = random.Random(SEED)
+    rng.shuffle(out)
+    n = len(out)
+    n_train = int(n * TRAIN_RATIO)
+    n_val   = int(n * VAL_RATIO)
+    
+    if split_mode == "train":
+        out = out[:n_train]
+    elif split_mode == "val":
+        out = out[n_train:n_train+n_val]
+    elif split_mode == "test":
+        out = out[n_train+n_val:]
+    # if split_mode == "all", keep out as is
+
+    if is_physics and out:
+        for s in out:
+            s["premises-NL"] = []
+            s["questions"]   = [s.get("question", "")]
+            s["answers"]     = [str(s.get("answer", "Unknown"))]
+            s["_unit"]       = s.get("unit", "")
+            s["_is_physics"] = True
+    return out
+
+def safe_json(text):
+    text = text.strip()
+    try: return json.loads(text)
+    except: pass
+    m = re.search(r"```(?:json)?\s*\n?(.*?)```", text, re.DOTALL)
+    if m:
+        try: return json.loads(m.group(1).strip())
+        except: pass
+    start = text.find("{")
+    if start >= 0:
+        depth, end = 0, start
+        for i in range(start, len(text)):
+            if text[i] == "{": depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    end = i
+                    break
+        try: return json.loads(text[start : end + 1])
+        except: pass
+    return {}
+
+def batch_generate(prompt_pairs, max_tokens):
+    formatted = []
+    for sys_msg, usr_msg in prompt_pairs:
+        messages = [{"role": "system", "content": sys_msg}, {"role": "user", "content": usr_msg}]
+        formatted.append(tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True))
+    params = SamplingParams(temperature=0.05, max_tokens=max_tokens, repetition_penalty=1.1)
+    outputs = llm.generate(formatted, params)
+    outputs_sorted = sorted(outputs, key=lambda x: int(x.request_id))
+    return [o.outputs[0].text.strip() for o in outputs_sorted]
