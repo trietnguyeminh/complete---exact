@@ -1,0 +1,13 @@
+=== v5.1 (BoN only) ===
+  [OK] batch_generate_bon
+  [OK] v5.1 label
+  [OK] z3_select_best
+
+=== v5.2 (BoN + SpaCy) ===
+  [OK] ENTITY HINTS in prompt
+  [OK] SpaCy loaded
+  [OK] batch_generate_bon
+  [OK] extract_entities_spacy
+  [OK] v5.2 label
+  [OK] z3_select_best
+
