@@ -1,0 +1,61 @@
+=== v5.1 functions ===
+def load_dataset(path, is_physics=False, max_samples=N_SAMPLES, split_mode=RUN_ON_SPLIT):
+def safe_json(text):
+def batch_generate(prompt_pairs, max_tokens):
+def batch_generate_bon(prompt_pairs, max_tokens, n=BEST_OF_N):
+def z3_select_best(candidates):
+def get_z3_func(name, arity):
+def _resolve_bound_var_name(bv):
+def _resolve_predicate_arg(a, var_map):
+def compile_ast(node, var_map):
+def verify_with_z3(premises_ast):
+def hallucination_check(local_ontology, premises_ast):
+def _compile_premises_to_solver(premises_ast):
+def z3_entailment_check(premises_ast, question_fol_item):
+def _entail_yes_no(premises_ast, q_item):
+def _entail_mc(premises_ast, q_item):
+class PipelineResult:
+def _make_pass1_user(sample):
+def _make_pass1_correction_user(sample, result):
+def _make_pass2_user(sample, local_ontology):
+def _make_answer_user(sample, fol_context, question, q_idx):
+def _process_pass1(result, raw_response):
+def _normalize_number(s):
+def _physics_answer_match(predicted, ground_truth, tolerance=PHYSICS_TOLERANCE):
+def _run_physics_pipeline(samples, results, N, t0_all, dataset_name):
+def run_batch_pipeline(samples, dataset_name="Dataset"):
+def evaluate(results):
+def result_to_dict(r):
+def finalize_and_save(results, output_path, dataset_path, dataset_name="Dataset"):
+
+=== v5.2 functions ===
+def load_dataset(path, is_physics=False, max_samples=N_SAMPLES, split_mode=RUN_ON_SPLIT):
+def safe_json(text):
+def batch_generate(prompt_pairs, max_tokens):
+def batch_generate_bon(prompt_pairs, max_tokens, n=BEST_OF_N):
+def z3_select_best(candidates):
+def get_z3_func(name, arity):
+def _resolve_bound_var_name(bv):
+def _resolve_predicate_arg(a, var_map):
+def compile_ast(node, var_map):
+def verify_with_z3(premises_ast):
+def hallucination_check(local_ontology, premises_ast):
+def _compile_premises_to_solver(premises_ast):
+def z3_entailment_check(premises_ast, question_fol_item):
+def _entail_yes_no(premises_ast, q_item):
+def _entail_mc(premises_ast, q_item):
+class PipelineResult:
+def _make_pass1_user(sample):
+def _make_pass1_correction_user(sample, result):
+def _make_pass2_user(sample, local_ontology):
+def _make_answer_user(sample, fol_context, question, q_idx):
+def _process_pass1(result, raw_response):
+def _normalize_number(s):
+def _physics_answer_match(predicted, ground_truth, tolerance=PHYSICS_TOLERANCE):
+def _run_physics_pipeline(samples, results, N, t0_all, dataset_name):
+def run_batch_pipeline(samples, dataset_name="Dataset"):
+def evaluate(results):
+def result_to_dict(r):
+def finalize_and_save(results, output_path, dataset_path, dataset_name="Dataset"):
+
+=== v5.2 EXTRA (not in v5.1) ===
