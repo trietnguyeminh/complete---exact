@@ -1,0 +1,13 @@
+
+=== v5.1 (notebook_v5_1_bon.ipynb) ===
+  [OK] batch_generate_bon found
+  [OK] z3_select_best found
+  [OK] batch_generate_bon found
+  [OK] z3_select_best found
+
+=== v5.2 (notebook_v5_2_bon_spacy.ipynb) ===
+  [OK] SpaCy loaded
+  [OK] batch_generate_bon found
+  [OK] z3_select_best found
+  [OK] batch_generate_bon found
+  [OK] z3_select_best found
